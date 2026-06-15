@@ -1,0 +1,140 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String?
+  username      String?  @unique
+  avatarUrl     String?
+  createdAt     DateTime @default(now())
+
+  friendsAdded      Friendship[] @relation("requester")
+  friendsReceived   Friendship[] @relation("receiver")
+  ratings           UserRating[]
+  sessionsCreated   GroupSession[]
+  sessionMemberships SessionMember[]
+  itineraries       Itinerary[]
+  votes             Vote[]
+}
+
+model Friendship {
+  id          String   @id @default(cuid())
+  requesterId String
+  receiverId  String
+  status      String   @default("pending")
+  createdAt   DateTime @default(now())
+
+  requester User @relation("requester", fields: [requesterId], references: [id])
+  receiver  User @relation("receiver", fields: [receiverId], references: [id])
+}
+
+model Restaurant {
+  id            String   @id @default(cuid())
+  foursquareId  String?  @unique
+  osmId         String?  @unique
+  name          String
+  address       String
+  city          String
+  latitude      Float
+  longitude     Float
+  cuisineTypes  Json
+  priceRange    Int?
+  phone         String?
+  website       String?
+  openingHours  Json?
+  photoUrls     Json?
+  overallRating Float?
+  totalRatings  Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  ratings        UserRating[]
+  sessionResults SessionResult[]
+  votes          Vote[]
+}
+
+model UserRating {
+  id           String   @id @default(cuid())
+  userId       String
+  restaurantId String
+  overallScore Float
+  foodScore    Float?
+  valueScore   Float?
+  ambianceScore Float?
+  note         String?
+  wouldReturn  Boolean?
+  visitedAt    DateTime?
+  createdAt    DateTime @default(now())
+
+  user       User       @relation(fields: [userId], references: [id])
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id])
+}
+
+model GroupSession {
+  id        String   @id @default(cuid())
+  creatorId String
+  status    String   @default("waiting")
+  city      String
+  occasion  String?
+  createdAt DateTime @default(now())
+
+  creator User            @relation(fields: [creatorId], references: [id])
+  members SessionMember[]
+  results SessionResult[]
+  votes   Vote[]
+}
+
+model SessionMember {
+  id          String   @id @default(cuid())
+  sessionId   String
+  userId      String
+  status      String   @default("invited")
+  preferences Json?
+  createdAt   DateTime @default(now())
+
+  session GroupSession @relation(fields: [sessionId], references: [id])
+  user    User         @relation(fields: [userId], references: [id])
+}
+
+model SessionResult {
+  id                 String  @id @default(cuid())
+  sessionId          String
+  restaurantId       String
+  compatibilityScore Float
+  explanation        String?
+  rank               Int
+
+  session    GroupSession @relation(fields: [sessionId], references: [id])
+  restaurant Restaurant   @relation(fields: [restaurantId], references: [id])
+}
+
+model Itinerary {
+  id            String   @id @default(cuid())
+  userId        String
+  name          String
+  venues        Json
+  totalDistance Float?
+  estimatedTime Int?
+  estimatedCost Float?
+  createdAt     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Vote {
+  id           String  @id @default(cuid())
+  sessionId    String
+  userId       String
+  restaurantId String
+  vote         String
+
+  session    GroupSession @relation(fields: [sessionId], references: [id])
+  user       User         @relation(fields: [userId], references: [id])
+  restaurant Restaurant   @relation(fields: [restaurantId], references: [id])
+}
